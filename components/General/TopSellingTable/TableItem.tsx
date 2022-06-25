@@ -4,9 +4,10 @@ const TableItem = ({ item } : { item: TopSellingRequestItem }) => {
   let dataTable: TopSellingDataTable | any = item.dataTable || null
     
   const priceLoader = () => {
+    const price = Number(dataTable.price).toFixed(2)
     if(dataTable.price == 0)
       return <span className="mr-2">Loading...</span>
-    return <span className="mr-2">{`${dataTable.price} ${dataTable.symbol}`}</span>
+    return <span className="mr-2">{`${price} ${dataTable.symbol}`}</span>
   }
 
   return (
