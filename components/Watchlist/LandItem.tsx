@@ -1,26 +1,44 @@
 import { useEffect, useState } from 'react'
-import { ExternalLink, OptimizedImage, PriceList, SharePopup } from '../General'
+import { ExternalLink, OptimizedImage, PriceList } from '../General'
 import { IPredictions } from '../../lib/types'
-import { FiExternalLink, FiShare2 } from 'react-icons/fi'
-import { IPriceCard } from '../../lib/valuation/valuationTypes'
+import { FiExternalLink } from 'react-icons/fi'
+import {
+  ICoinPrices,
+  IPriceCard,
+  SingleLandAPIResponse,
+} from '../../lib/valuation/valuationTypes'
 import React from 'react'
 import { FaTrash } from 'react-icons/fa'
-import { Fade } from 'react-awesome-reveal'
-import { useVisible } from '../../lib/hooks'
-import { Metaverse } from '../../lib/enums'
-import { handleTokenID } from '../../lib/valuation/valuationUtils'
+import {
+  handleLandName,
+  handleTokenID,
+  convertETHPrediction,
+} from '../../lib/valuation/valuationUtils'
 import { BsTwitter } from 'react-icons/bs'
 import { SocialMediaOptions } from '../../lib/socialMediaOptions'
-interface IWatchListCard extends IPriceCard {
-  currentPrice?: number
+import { formatName } from '../../lib/utilities'
+import { createOpenSeaLink } from '../../backend/services/openSeaDataManager'
+import { Metaverse } from '../../lib/metaverse'
+interface IWatchListCard {
+  land: SingleLandAPIResponse
+  landId: string
+  metaverse: Metaverse
   remove: (landId: string, metaverse: Metaverse) => Promise<void>
+  coinPrices: ICoinPrices
 }
 const LandItem = ({
-  apiData,
-  predictions,
-  currentPrice,
+  coinPrices,
+  land,
+  landId,
+  metaverse,
   remove,
 }: IWatchListCard) => {
+  const predictions = convertETHPrediction(
+    coinPrices,
+    land.eth_predicted_price,
+    metaverse
+  )
+  const openSeaLink = createOpenSeaLink(metaverse, landId)
   const mobile = window.innerWidth < 640
   const [expanded, setExpanded] = useState(mobile)
   const imgSize = mobile ? 170 : expanded ? 170 : 70
@@ -29,15 +47,14 @@ const LandItem = ({
   })
 
   // SocialMediaOptions contains all options with their texts, icons, etc..
-  const options = SocialMediaOptions(apiData, predictions)
+  const options = SocialMediaOptions(landId, metaverse, predictions)
 
-  // Hook for Popup
-  const { ref, isVisible: showPopup, setIsVisible } = useVisible(false)
   // Mobile view is always expanded
   const handleExpanded = () => {
     window.innerWidth < 640 ? setExpanded(true) : setExpanded(!expanded)
   }
-  const notListed = isNaN(currentPrice!)
+  const notListed = typeof land.current_price !== 'number'
+  const isAxie = metaverse === 'axie-infinity'
 
   useEffect(() => {
     // Changing the ammount of prices shown depending of expanded state
@@ -66,14 +83,14 @@ const LandItem = ({
       <div className='flex flex-row sm:justify-start gap-4 sm:w-fit w-full  transition-all'>
         {/* Image Link */}
         <a
-          href={apiData?.external_link}
+          href={land.external_link || ''}
           target='_blank'
           className='hover:shadow-dark relative flex'
         >
           <OptimizedImage
             height={imgSize}
             width={imgSize}
-            src={apiData!.images.image_url}
+            src={land.images.image_url || 'images/mgh_logo.png'}
             rounded='lg'
           />
           <FiExternalLink className='absolute top-0 right-0 text-white text-xs backdrop-filter backdrop-blur-sm rounded-xl w-6 h-6 p-1' />
@@ -82,10 +99,10 @@ const LandItem = ({
         <div className='flex flex-col justify-between'>
           <div>
             <h3 className='text-base sm:text-xl font-normal md:text-2xl p-0 leading-4'>
-              {apiData?.name}
+              {handleLandName(metaverse, land.coords)}
             </h3>
             <p className='text-gray-400'>
-              ID: {handleTokenID(apiData!.tokenId)}{' '}
+              ID: {handleTokenID(landId)}{' '}
               <BsTwitter
                 title='Share Valuation'
                 onClick={() => window.open(options.twitter.valuationLink)}
@@ -96,20 +113,21 @@ const LandItem = ({
           {expanded && (
             <>
               {/* External Links */}
-              <nav className='flex flex-col md:gap-4 gap-[1.40rem]'>
-                <ExternalLink href={apiData!.opensea_link} text='OpenSea' />
-                <ExternalLink
-                  href={apiData!.external_link}
-                  text={
-                    apiData!.metaverse[0].toUpperCase() +
-                    apiData!.metaverse.substring(1)
-                  }
-                />
-              </nav>
+              <div className='flex flex-col md:gap-4 gap-[1.40rem]'>
+                {openSeaLink && (
+                  <ExternalLink href={openSeaLink} text='OpenSea' />
+                )}
+                {land.external_link && (
+                  <ExternalLink
+                    href={land.external_link}
+                    text={formatName(metaverse)}
+                  />
+                )}
+              </div>
               {/* Remove Button */}
               <button
                 className='relative transition font-medium  ease-in-out flex gap-1 text-sm hover:text-red-500 text-red-600 z-20'
-                onClick={() => remove(apiData!.tokenId, apiData!.metaverse)}
+                onClick={() => remove(landId, metaverse)}
               >
                 <span>Remove</span>
                 <FaTrash className='relative -bottom-005' />
@@ -121,7 +139,7 @@ const LandItem = ({
       {/* RIGHT */}
       <div className='transition-all sm:relative static bottom-1'>
         {/* Price List */}
-        <PriceList predictions={prices} />
+        <PriceList predictions={prices} metaverse={metaverse} />
         {/* Current Listing Price */}
         <p
           className={`text-md text-left sm:text-right pt-2 sm:pt-0  relative left-1 sm:left-0 ${
@@ -130,7 +148,9 @@ const LandItem = ({
               : 'text-gray-400 sm:static'
           }`}
         >
-          {notListed ? 'Not Listed' : `Listed: ${currentPrice} USDC`}
+          {notListed
+            ? 'Not Listed'
+            : `Listed: ${land.current_price?.toFixed(2)} ETH`}
         </p>
       </div>
 
@@ -140,19 +160,6 @@ const LandItem = ({
         onClick={() => window.open(options.twitter.valuationLink)}
         className='absolute sm:hidden h-5 w-5 z-30 bottom-6 right-4 text-gray-200 hover:text-blue-400 transition ease-in-out duration-300 cursor-pointer'
       />
-      {/* Share Popup, commented out. Using Twitter only for now */}
-      {/* <div className='contents' ref={ref}>
-        {showPopup && (
-          <Fade className='z-30 absolute -bottom-3 left-1/2 -translate-x-2/4'>
-            <SharePopup
-              apiData={apiData}
-              sharing='valuation'
-              predictions={predictions}
-              onPopupSelect={() => setIsVisible(false)}
-            />
-          </Fade>
-        )}
-      </div> */}
     </li>
   )
 }

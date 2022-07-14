@@ -1,16 +1,21 @@
 import { FaTelegram, FaTwitter, FaWhatsapp } from 'react-icons/fa'
 import { FiCopy } from 'react-icons/fi'
+import { Metaverse } from './metaverse'
 import { IAPIData, IPredictions } from './types'
 /**
  *
  * @returns List of Social Media Options
+ * @param wallet only necessary for portfolio cards
+ * @param externalLink Not needed unless we enable whatsapp sharing
  */
 export const SocialMediaOptions = (
-  apiData?: IAPIData,
+  tokenId?: string,
+  metaverse?: Metaverse,
   predictions?: IPredictions,
-  wallet?: string
+  wallet?: string,
+  externalLink?: string
 ) => {
-  const mghLink = `https://app.metagamehub.io/valuation?land=${apiData?.tokenId}%26metaverse=${apiData?.metaverse}`
+  const mghLink = `https://app.metagamehub.io/valuation?land=${tokenId}%26metaverse=${metaverse}`
   // Text for Portfolio
   const portfolioText = `Here%20is%20my%20Metaverse%20collection!%20%23MyNFTs%20%23MGHDAO%0A%0A&url=https://app.metagamehub.io/portfolio?wallet=${wallet}`
 
@@ -29,7 +34,7 @@ export const SocialMediaOptions = (
     2
   )}%20ETH%0A${predictions?.usdPrediction.toFixed(
     2
-  )}%20USDC%0A**************%0A%0A${apiData?.opensea_link}%0A%0A${mghLink}`
+  )}%20USDC%0A**************%0A%0A${externalLink}%0A%0A${mghLink}`
   return {
     twitter: {
       portfolioLink: `https://twitter.com/intent/tweet?text=${portfolioText}`,

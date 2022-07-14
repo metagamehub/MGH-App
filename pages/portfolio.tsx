@@ -1,21 +1,21 @@
 import Head from 'next/head'
 import { NextPage } from 'next'
 import { useEffect, useState } from 'react'
-import { formatLandAsset } from '../lib/valuation/valuationUtils'
+import {
+  convertETHPrediction,
+  fetchLandList,
+} from '../lib/valuation/valuationUtils'
 import {
   ICoinPrices,
-  IPriceCard,
-  LandsKey,
+  LandListAPIResponse,
 } from '../lib/valuation/valuationTypes'
 import { ExternalLink, PriceList } from '../components/General'
 import { IPredictions } from '../lib/types'
 import { useAppSelector } from '../state/hooks'
-import { Contracts } from '../lib/contracts'
 import { useRouter } from 'next/router'
-import { ellipseAddress } from '../lib/utilities'
+import { ellipseAddress, formatName, typedKeys } from '../lib/utilities'
 import { Loader, WalletModal } from '../components'
 import { Fade } from 'react-awesome-reveal'
-import { Metaverse } from '../lib/enums'
 import PortfolioList from '../components/Portfolio/PortfolioList'
 import { BsTwitter } from 'react-icons/bs'
 import { FiCopy } from 'react-icons/fi'
@@ -24,8 +24,9 @@ import WalletButton from '../components/WalletButton'
 import useConnectWeb3 from '../backend/connectWeb3'
 import { ethers } from 'ethers'
 import { Chains } from '../lib/chains'
-import { getUserNFTs } from '../lib/nftUtils'
+import { getAxieLands, getUserNFTs } from '../lib/nftUtils'
 import { getAddress } from 'ethers/lib/utils'
+import { Metaverse, metaverseObject } from '../lib/metaverse'
 
 const PortfolioPage: NextPage<{ prices: ICoinPrices }> = ({ prices }) => {
   const { query, push } = useRouter()
@@ -42,30 +43,16 @@ const PortfolioPage: NextPage<{ prices: ICoinPrices }> = ({ prices }) => {
   const [totalWorth, setTotalWorth] = useState<IPredictions>(initialWorth)
   const [totalAssets, setTotalAssets] = useState(0)
   const [alreadyFetched, setAlreadyFetched] = useState(false)
-  const [formattedSandboxAssets, setFormattedSandboxAssets] = useState<
-    IPriceCard[]
-  >([])
-  const [formattedDecentralandAssets, setFormattedDecentralandAssets] =
-    useState<IPriceCard[]>([])
+  const [lands, setLands] = useState<Record<Metaverse, LandListAPIResponse>>()
   const [loading, setLoading] = useState(true)
-  const socialMedia = SocialMediaOptions(undefined, undefined, address)
+  const socialMedia = SocialMediaOptions(
+    undefined,
+    undefined,
+    undefined,
+    address
+  )
   const externalWallet = query.wallet
-
-  const landOptions = {
-    // LAND contract address might have to be changed once Sandbox && OpenSea finish migration
-    sandbox: {
-      contract: Contracts.LAND.ETHEREUM_MAINNET.newAddress,
-      assetsList: formattedSandboxAssets,
-      setList: setFormattedSandboxAssets,
-    },
-    decentraland: {
-      contract: Contracts.PARCEL.ETHEREUM_MAINNET.address,
-      assetsList: formattedDecentralandAssets,
-      setList: setFormattedDecentralandAssets,
-    },
-  }
-
-  const options = Object.keys(landOptions) as LandsKey[]
+  const isRonin = query.wallet?.toString().startsWith('ronin')
 
   const copyLink = () => {
     navigator.clipboard.writeText(
@@ -92,11 +79,17 @@ const PortfolioPage: NextPage<{ prices: ICoinPrices }> = ({ prices }) => {
     setLoading(true)
     setTotalWorth(initialWorth)
     setTotalAssets(0)
-    options.forEach((option) => {
-      landOptions[option].setList([])
-    })
+    setLands(undefined)
   }
 
+  const formatAddress = (address: string) => {
+    // If Ronin Address
+    if (address.startsWith('ronin:')) {
+      return getAddress(address.substring(address.indexOf(':') + 1))
+    }
+    if (address.startsWith('0x')) return getAddress(address)
+    return getAddress('0x0000000000000000000000000000000000000000')
+  }
   useEffect(() => {
     if (externalWallet && alreadyFetched) return
     setAlreadyFetched(true)
@@ -112,39 +105,53 @@ const PortfolioPage: NextPage<{ prices: ICoinPrices }> = ({ prices }) => {
     // Requesting and Formatting Assets
     const setPortfolioAssets = async () => {
       resetState()
-      // OpenSea API Call
+      if (!address && !externalWallet) return setLoading(false)
+
+      // Infura/ Axie Market API Call
       try {
         await Promise.all(
-          options.map(async (option) => {
-            const rawIds = await getUserNFTs(
-              provider,
-              getAddress((externalWallet as string) ?? address),
-              landOptions[option].contract
+          typedKeys(metaverseObject).map(async (metaverse) => {
+            let rawIds: string[] | undefined
+            if (metaverse === 'axie-infinity') {
+              rawIds = await getAxieLands(
+                formatAddress((externalWallet as string) ?? address)
+              )
+            } else {
+              rawIds = await getUserNFTs(
+                provider,
+                formatAddress((externalWallet as string) ?? address),
+                metaverse
+              )
+            }
+            if (!rawIds || rawIds.length <= 0) return
+
+            // LandList Call
+            const metaverseLandsObject = await fetchLandList(metaverse, rawIds)
+
+            // Adding Total Worth
+            const totalMvWorth = { usd: 0, eth: 0 }
+            typedKeys(metaverseLandsObject).forEach((land) => {
+              totalMvWorth.usd += convertETHPrediction(
+                prices,
+                metaverseLandsObject[land].eth_predicted_price,
+                metaverse
+              ).usdPrediction
+              totalMvWorth.eth += metaverseLandsObject[land].eth_predicted_price
+            })
+
+            // Setting Lands
+            setLands((previous) => {
+              return { ...previous!, [metaverse]: metaverseLandsObject }
+            })
+            // Setting Asset Number
+            setTotalAssets(
+              (previous) => previous + typedKeys(metaverseLandsObject).length
             )
-            rawIds.length > 0 &&
-              (await Promise.all(
-                rawIds.map(async (id) => {
-                  const formattedAsset = await formatLandAsset(
-                    id,
-                    prices,
-                    option as Metaverse
-                  )
-                  landOptions[option].setList((previousState) => [
-                    ...previousState,
-                    formattedAsset,
-                  ])
-                  // Adding the worth of each asset into the totalWorth
-                  setTotalWorth((previousWorth) => ({
-                    ethPrediction:
-                      previousWorth.ethPrediction +
-                      formattedAsset.predictions!.ethPrediction,
-                    usdPrediction:
-                      previousWorth.usdPrediction +
-                      formattedAsset.predictions!.usdPrediction,
-                  }))
-                  setTotalAssets((previous) => previous + 1)
-                })
-              ))
+            // Adding the worth of each metaverse into the totalWorth
+            setTotalWorth((previousWorth) => ({
+              ethPrediction: previousWorth.ethPrediction + totalMvWorth.eth,
+              usdPrediction: previousWorth.usdPrediction + totalMvWorth.usd,
+            }))
           })
         )
         setLoading(false)
@@ -181,7 +188,11 @@ const PortfolioPage: NextPage<{ prices: ICoinPrices }> = ({ prices }) => {
                 <ExternalLink
                   className='m-auto text-center sm:text-lg md:text-xl'
                   text={ellipseAddress(externalWallet as string)}
-                  href={'https://opensea.io/' + externalWallet}
+                  href={
+                    isRonin
+                      ? `https://marketplace.axieinfinity.com/profile/${externalWallet}/land/`
+                      : `https://opensea.io/${externalWallet}`
+                  }
                 />
               </>
             ) : (
@@ -265,21 +276,25 @@ const PortfolioPage: NextPage<{ prices: ICoinPrices }> = ({ prices }) => {
         </hgroup>
 
         {/* Lands Grid */}
-        {options.map(
-          (option) =>
-            landOptions[option].assetsList.length > 0 && (
-              <article key={option} className='mb-8 sm:mb-12'>
-                <Fade>
-                  <h3 className='text-center gray-box green-text-gradient mb-8 sm:mb-12'>
-                    {option.toUpperCase()}
-                  </h3>
-                </Fade>
-                <PortfolioList
-                  formattedAssets={landOptions[option].assetsList}
-                />
-              </article>
-            )
-        )}
+        {lands &&
+          typedKeys(metaverseObject).map(
+            (metaverse) =>
+              lands[metaverse] &&
+              typedKeys(lands[metaverse]).length > 0 && (
+                <article key={metaverse} className='mb-8 sm:mb-12'>
+                  <Fade>
+                    <h3 className='text-center gray-box green-text-gradient mb-8 sm:mb-12'>
+                      {formatName(metaverse, true)}
+                    </h3>
+                  </Fade>
+                  <PortfolioList
+                    metaverse={metaverse}
+                    lands={lands[metaverse]}
+                    prices={prices}
+                  />
+                </article>
+              )
+          )}
       </section>
     </>
   )
@@ -287,7 +302,7 @@ const PortfolioPage: NextPage<{ prices: ICoinPrices }> = ({ prices }) => {
 
 export async function getServerSideProps() {
   const coin = await fetch(
-    'https://api.coingecko.com/api/v3/simple/price?ids=ethereum%2Cthe-sandbox%2Cdecentraland&vs_currencies=usd'
+    'https://api.coingecko.com/api/v3/simple/price?ids=ethereum%2Cthe-sandbox%2Cdecentraland%2Caxie-infinity&vs_currencies=usd'
   )
   const prices: ICoinPrices = await coin.json()
 

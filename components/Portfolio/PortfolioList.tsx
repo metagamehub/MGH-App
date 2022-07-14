@@ -1,29 +1,32 @@
 import React from 'react'
 import { Fade } from 'react-awesome-reveal'
-import { IPriceCard } from '../../lib/valuation/valuationTypes'
+import { Metaverse } from '../../lib/metaverse'
+import { typedKeys } from '../../lib/utilities'
+import {
+  ICoinPrices,
+  LandListAPIResponse,
+} from '../../lib/valuation/valuationTypes'
 import { HorizontalPriceCard } from '../General'
-import { LandItem } from '../Watchlist'
 
-const PortfolioList = ({
-  formattedAssets,
-}: {
-  formattedAssets: IPriceCard[]
-}) => {
+interface Props {
+  lands: LandListAPIResponse
+  prices: ICoinPrices
+  metaverse: Metaverse
+}
+const PortfolioList = ({ lands, prices, metaverse }: Props) => {
   return (
     <ul className='grid gap-4 lg:gap-12 md:gap-6 md:grid-cols-2'>
       <Fade duration={400} className='w-full flex justify-center'>
-        {formattedAssets.map(
-          ({ apiData, showCard, predictions, processing }) => (
-            <li key={apiData?.tokenId} className='w-full gray-box'>
-              <HorizontalPriceCard
-                apiData={apiData}
-                showCard={showCard}
-                predictions={predictions}
-                processing={processing}
-              />
-            </li>
-          )
-        )}
+        {typedKeys(lands).map((land) => (
+          <li key={land} className='w-full gray-box'>
+            <HorizontalPriceCard
+              metaverse={metaverse}
+              land={lands[land]}
+              landId={land}
+              prices={prices}
+            />
+          </li>
+        ))}
       </Fade>
     </ul>
   )

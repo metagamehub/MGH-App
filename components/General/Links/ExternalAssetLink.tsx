@@ -1,25 +1,44 @@
 import { FiExternalLink } from 'react-icons/fi'
 import { ExternalLink } from '.'
 import { OptimizedImage } from '..'
+import { createOpenSeaLink } from '../../../backend/services/openSeaDataManager'
+import { Metaverse } from '../../../lib/metaverse'
 import { IAPIData } from '../../../lib/types'
-import { handleTokenID } from '../../../lib/valuation/valuationUtils'
+import { formatName } from '../../../lib/utilities'
+import { SingleLandAPIResponse } from '../../../lib/valuation/valuationTypes'
+import {
+  handleLandName,
+  handleTokenID,
+} from '../../../lib/valuation/valuationUtils'
 interface Props {
-  apiData: IAPIData
   width?: number
   height?: number
   layout?: 'intrinsic' | 'fixed' | 'fill' | 'responsive' | undefined
+  land: SingleLandAPIResponse
+  landId: string
+  metaverse: Metaverse
 }
-const ExternalAssetLink = ({ apiData, width, height, layout }: Props) => {
+const ExternalAssetLink = ({
+  metaverse,
+  land,
+  landId,
+  width,
+  height,
+  layout,
+}: Props) => {
+  const openSeaLink = createOpenSeaLink(metaverse, landId)
   return (
     <div className='w-full relative flex lg:flex-col gap-3 lg:gap-4 xl:gap-6'>
       {/* External Img Link */}
       <a
-        href={apiData.external_link}
+        href={land.external_link || ''}
         target='_blank'
         className='hover:shadow-dark block relative w-[50vw] xs:w-32 sm:w-36 lg:w-full h-full'
       >
         <OptimizedImage
-          src={apiData.images?.image_url || '/images/mgh_logo.png'}
+
+          src={land.images.image_url || '/images/mgh_logo.png'}
+
           rounded='lg'
           layout={layout}
           width={width || 150}
@@ -35,26 +54,19 @@ const ExternalAssetLink = ({ apiData, width, height, layout }: Props) => {
         <div>
           {/* Asset Name */}
           <h3 className='text-base xs:text-xl lg:font-bold 2xl:text-2xl lg:text-2xl md:text-lg p-0 leading-4  text-gray-200'>
-            {apiData.name}
+            {handleLandName(metaverse, land.coords)}
           </h3>
           {/* Asset ID */}
           <p className='text-xs text-gray-400'>
-            Token ID: {handleTokenID(apiData.tokenId)}
+            Token ID: {handleTokenID(landId)}
           </p>
         </div>
         {/* External Links */}
         <div className='flex flex-col lg:flex-row gap-5 lg:items-center'>
+          {openSeaLink && <ExternalLink href={openSeaLink} text='OpenSea' />}
           <ExternalLink
-            // className='text-xs md:text-sm'
-            href={apiData.opensea_link}
-            text='OpenSea'
-          />
-          <ExternalLink
-            href={apiData.external_link}
-            text={
-              apiData.metaverse[0].toUpperCase() +
-              apiData.metaverse.substring(1)
-            }
+            href={land.external_link || ''}
+            text={formatName(metaverse)}
           />
         </div>
       </div>

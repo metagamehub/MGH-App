@@ -9,7 +9,7 @@ export default async function handler(
   const metaverse = req.query.metaverse
   try {
     const response = await fetch(
-      `https://api.opensea.io/api/v1/asset/${metaverse}/${tokenId}/`,
+      `https://api.opensea.io/api/v1/asset/${metaverse}/${tokenId}/listings?limit=20`,
       {
         headers: {
           'Content-Type': 'application/json',

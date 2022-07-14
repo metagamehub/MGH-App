@@ -19,18 +19,19 @@ interface Props {
 const OptimizedImage = ({
   src,
   layout,
-  height,
-  width,
+  height = 150,
+  width = 150,
   rounded,
   className,
   objectFit,
 }: Props) => {
+  const small = height < 40 && width < 40
   return (
     <Image
-      placeholder='blur'
+      placeholder={small ? undefined : 'blur'}
       blurDataURL={src}
       src={src}
-      width={width || 150}
+      width={width}
       layout={layout}
       height={height || 150}
       loading='lazy'

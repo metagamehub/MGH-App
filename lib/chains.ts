@@ -61,6 +61,30 @@ export const Chains = {
     },
     blockExplorer: "https://mumbai.polygonscan.com",
   },
+  RONIN_MAINNET: {
+    name: "Ronin Mainnet",
+    chainId: 2020,
+    chainIdHex: "0x7E4",
+    rpcUrl: "https://api.roninchain.com/rpc",
+    nativeCurrency: {
+      name: "Ethereum",
+      symbol: "Eth",
+      decimals: 18,
+    },
+    blockExplorer: "https://explorer.roninchain.com/",
+  },
+  RONIN_TESTNET: {
+    name: "Ronin Testnet",
+    chainId: 2021,
+    chainIdHex: "0x7E5",
+    rpcUrl: "https://ronin-testnet.skymavis.com/rpc",
+    nativeCurrency: {
+      name: "Ethereum",
+      symbol: "Eth",
+      decimals: 18,
+    },
+    blockExplorer: "https://explorer.roninchain.com/",
+  },
 }
 
 export const supportedChains: IChainData[] = [

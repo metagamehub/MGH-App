@@ -9,6 +9,8 @@ import tokenAbiETHRinkeby from '../backend/abi/tokenAbiETHRinkeby.json'
 import stakingAbiETHRinkeby from '../backend/abi/stakingAbiETHRinkeby.json'
 import tokenAbiETHMainnet from '../backend/abi/tokenAbiETHMainnet.json'
 
+import AxieLandAbi from '../backend/abi/AxieLand.json'
+
 export const Contracts = {
   MGH_TOKEN: {
     MATIC_TESTNET: {
@@ -57,6 +59,12 @@ export const Contracts = {
   PARCEL: {
     ETHEREUM_MAINNET: {
       address: '0xF87E31492Faf9A91B02Ee0dEAAd50d51d56D5d4d',
+    },
+  },
+  AXIE_LANDS: {
+    RONIN_MAINNET: {
+      address: '0x8c811e3c958e190f5ec15fb376533a3398620500',
+      abi: new Interface(AxieLandAbi),
     },
   },
 }

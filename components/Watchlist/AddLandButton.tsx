@@ -40,7 +40,7 @@ const AddLandButton = ({ limitReached, state, addBy }: Props) => {
         (state === options[addBy].success
           ? 'bg-green-500 text-white'
           : 'bg-gray-200  text-gray-800') +
-        ' items-center justify-center font-medium text-center transition-all flex grow gap-2 ease-in hover:shadow-subtleWhite z-10 p-2 rounded-xl hover:bg-white'
+        ' items-center justify-center font-medium text-center transition-all flex grow gap-2 ease-in hover:shadow-subtleWhite z-10 p-2 rounded-xl md:hover:bg-white'
       }
     >
       {/* Loading Icon */}
@@ -59,7 +59,7 @@ const AddLandButton = ({ limitReached, state, addBy }: Props) => {
         <MdAddLocationAlt className='h-5 w-5 relative bottom-[0.2rem]' />
       )}
       {/* Button Text */}
-      <span>
+      <span className='whitespace-nowrap'>
         {limitReached
           ? 'Limit Reached'
           : state === 'loading' || state === 'loadingFirst'

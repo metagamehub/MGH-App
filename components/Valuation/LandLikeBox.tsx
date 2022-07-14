@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { Fade } from 'react-awesome-reveal'
 import { BiDislike, BiLike } from 'react-icons/bi'
 import { BsTwitter } from 'react-icons/bs'
-import { Metaverse } from '../../lib/enums'
 import {
   dislikeLand,
   getValuationScores,
   likeLand,
 } from '../../lib/FirebaseUtilities'
+import { Metaverse } from '../../lib/metaverse'
 import { useAppSelector } from '../../state/hooks'
 
 export interface Score {

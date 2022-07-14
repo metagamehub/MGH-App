@@ -3,7 +3,8 @@ import { BsQuestionCircle } from 'react-icons/bs'
 import { AddLandButton } from '.'
 import { WalletModal } from '..'
 import useConnectWeb3 from '../../backend/connectWeb3'
-import { Metaverse } from '../../lib/enums'
+import { Metaverse } from '../../lib/metaverse'
+import { formatName } from '../../lib/utilities'
 import { LandsKey } from '../../lib/valuation/valuationTypes'
 import { WatchListState } from '../../pages/watchlist'
 import { OptimizedImage } from '../General'
@@ -23,19 +24,20 @@ interface Props {
   landKeys: LandsKey[]
 }
 const AddLandForm = ({ state, addToWatchList, ids, landKeys }: Props) => {
-  const limitReached = ids.length === 20
+  const limitReached = ids.length === landKeys.length * 10
   const [landId, setLandId] = useState<string>('')
   const [coordinates, setCoordinates] = useState<{ X: string; Y: string }>({
     X: '',
     Y: '',
   })
-  const [metaverse, setMetaverse] = useState<Metaverse>(Metaverse.SANDBOX)
+  const [metaverse, setMetaverse] = useState<Metaverse>('sandbox')
   const [openModal, setOpenModal] = useState(false)
-  const { web3Provider, disconnectWallet } = useConnectWeb3();
+  const { disconnectWallet } = useConnectWeb3()
 
   const mvOptions = {
     sandbox: { logo: '/images/the-sandbox-sand-logo.png' },
     decentraland: { logo: '/images/decentraland-mana-logo.png' },
+    'axie-infinity': { logo: '/images/axie-infinity-axs-logo.png' },
   }
 
   const addById = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -60,9 +62,11 @@ const AddLandForm = ({ state, addToWatchList, ids, landKeys }: Props) => {
       {openModal && <WalletModal onDismiss={() => setOpenModal(false)} />}
 
       <div className='w-full flex justify-center'>
-        <WalletButton onClick={() => setOpenModal(true)} disconnectWallet={disconnectWallet} />
+        <WalletButton
+          onClick={() => setOpenModal(true)}
+          disconnectWallet={disconnectWallet}
+        />
       </div>
-
     </>
   ) : (
     <div className='gray-box bg-opacity-10 transition-all w-fit mb-14 flex flex-col md:flex-row gap-6'>
@@ -77,22 +81,26 @@ const AddLandForm = ({ state, addToWatchList, ids, landKeys }: Props) => {
             <button
               disabled={limitReached}
               key={landKey}
-              onClick={() => setMetaverse(landKey as Metaverse)}
-              className={`flex flex-col items-center justify-center space-y-2 rounded-xl cursor-pointer p-2 px-3 pt-4 md:w-30 md:h-[9.7rem] w-24 h-24 group focus:outline-none ${metaverse === landKey
+              onClick={() => {
+                console.log(metaverse)
+                setMetaverse(landKey)}}
+              className={`flex flex-col items-center justify-center space-y-2 rounded-xl cursor-pointer p-2 px-3 pt-4 md:w-30 md:h-[9.7rem] w-24 h-24 group focus:outline-none ${
+                metaverse === landKey
                   ? 'border-opacity-100 text-gray-200'
                   : 'border-opacity-40 hover:border-opacity-100 text-gray-400 hover:text-gray-200'
-                } border border-gray-400 focus:border-opacity-100 transition duration-300 ease-in-out`}
+              } border border-gray-400 focus:border-opacity-100 transition duration-300 ease-in-out`}
             >
               <OptimizedImage
                 src={mvOptions[landKey].logo}
                 height={60}
                 width={60}
                 objectFit='contain'
-                className={`w-10 ${metaverse === landKey ? 'grayscale-0' : 'grayscale'
-                  } group-hover:grayscale-0 transition duration-300 ease-in-out`}
+                className={`w-10 ${
+                  metaverse === landKey ? 'grayscale-0' : 'grayscale'
+                } group-hover:grayscale-0 transition duration-300 ease-in-out`}
               />
               <p className='font-medium text-xs md:text-sm pt-1'>
-                {landKey[0].toUpperCase() + landKey.substring(1)}
+                {formatName(landKey)}
               </p>
             </button>
           ))}
