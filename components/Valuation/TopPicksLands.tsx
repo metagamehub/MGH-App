@@ -16,6 +16,7 @@ const TopPicksLands = ({ metaverse }: Props) => {
   useEffect(() => {
     const setData = async () => {
       setLoading(true)
+    
       await axios
         .get('https://services.itrmachines.com/val-analytics/topPicks', {
           params: { metaverse: metaverse },
@@ -23,7 +24,7 @@ const TopPicksLands = ({ metaverse }: Props) => {
         .then((response) => {
           setPicks(response.data)
           setLoading(false)
-        })
+        }).catch((error) => {console.log(error)})
     }
     setData().catch((e) => console.log(e))
   }, [metaverse])
